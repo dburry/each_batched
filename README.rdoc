@@ -2,7 +2,7 @@
 
 More grouping/batching logic options than what's included in Rails.
 
-Ever since Rails 2.3, it has had ActiveRecord::Batches#find_in_batches (and its cousin ActiveRecord::Batches#find_each) as a great resource saver, because it allowed you to run through larger data sets in batches, instead of loading everything under the sun into memory first.
+Ever since Rails 2.3, it has had ActiveRecord::Batches#find_in_batches[http://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-find_in_batches] (and its cousin ActiveRecord::Batches#find_each[http://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-find_each]) as a great resource saver, because it allowed you to run through larger data sets in batches, instead of loading everything under the sun into memory first.
 
 But it has some gotchas.  First, the algorithm it uses tries to keep from messing up during concurrent inserts/deletes, during the loop.  This is a good thing, except it does it by fixing the order to an id order, then grabbing each successive batch (with limit) that's greater than your last primary key id.  So there's no way to limit it to a subset of your data, and there's no way to order anything any differently than by primary key id order.  This can be rather limiting sometimes.  Also it uses finders in kind of an old fashioned way compared to Rails 3... instead of scopes.
 
@@ -21,36 +21,51 @@ So this library attempts to address these, by providing two additional algorithm
 * Two different algorithms provided, to fit your different needs.
 * Includes variants that yields groups (each as a scope), or yields individual rows, depending on your needs.
 
-== Usage
+== Installation
 
-Add <tt>each_batched</tt> to your Gemfile, and run <tt>bundle install</tt>
+Add to your <tt>Gemfile</tt>:
+
+ # Gemfile
+ 
+ gem 'each_batched'
+
+and run:
+
+ $ bundle install
+
+== Usage
 
 First, let's explain the "range" algorithm:
 * It simply uses offset/limit internally to run through each batch.
-* Benefit is: simple obvious approach, few queries.  Could work on primary-key-less data.
-* Drawback is: does NOT work well with data that could have inserts/deletes while you're looping (it might miss or duplicate random rows at the boundaries of batches)!  So it should only be used on data that you are sure will not change (such as locked data, or static data, etc).
+* Simple obvious approach, few queries.
+* Could work on primary-key-less data.
+* Does NOT work well with data that could have inserts/deletes while you're looping (it might miss or duplicate random rows at the boundaries of batches)!  So it should only be used on data that you are sure will not change (such as locked data, or static data, etc).
 
-  YourModel.each_by_ranges do |record|
-    # do something with this model record
-  end
-  YourModel.batches_by_ranges do |batch|
-    # do something with this batch
-    # it's a standard model scope that's already been loaded, and can act like an array of records
-  end
+ YourModel.each_by_ranges do |record|
+   # Do something with this model record
+ end
+ YourModel.batches_by_ranges do |batch|
+   # Do something with this batch
+   # It's a standard model scope that's already been loaded
+   # and can act like an array of records
+ end
 
 Next, the "ids" algorithm:
 * Grabs a list of all selected primary keys in one query, then loops through them all, grabbing the row data in batches.
-* Works with simultaneously changing data nicely.
+* Works with simultaneously changing data nicely (might miss added/deleted rows themselves of course).
 * For complicated queries, it could be faster than other approaches too.
 * May generate really long queries if you're doing a lot of rows in each batch.
 
-  YourModel.each_by_ids do |record|
-    # do something with this model record
-  end
-  YourModel.batches_by_ids do |batch|
-    # do something with this batch
-    # it's a standard model scope that has NOT been lazy loaded yet, but will be as soon as you access its records
-  end
+ YourModel.each_by_ids do |record|
+   # Do something with this model record
+ end
+ YourModel.batches_by_ids do |batch|
+   # Do something with this batch
+   # It's a standard model scope that has NOT been lazy loaded yet
+   # but will be as soon as you access its records
+ end
+
+All the above can take an optional parameter: the size of the batch to use (defaults to 1000).
 
 == Contributing
 
@@ -65,7 +80,8 @@ To set up a full development environment:
 
 == Alternatives
 
-<tt>ActiveRecord::Batches#find_in_batches</tt> and <tt>ActiveRecord::Batches#find_each</tt> built into rails 2.3 and above.
+* ActiveRecord::Batches#find_in_batches[http://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-find_in_batches] and
+* ActiveRecord::Batches#find_each[http://api.rubyonrails.org/classes/ActiveRecord/Batches.html#method-i-find_each] built into rails 2.3 and above.
 
 == License
 
