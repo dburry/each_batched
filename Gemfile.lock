@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    each_batched (0.0.1)
+    each_batched (0.1.0)
       rails (>= 3.0)
 
 GEM
