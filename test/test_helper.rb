@@ -5,6 +5,7 @@ if ENV.has_key?('USE_SIMPLECOV')
   require 'simplecov'
   SimpleCov.start do
     add_group 'Libraries', 'lib'
+    add_filter 'test/dummy'
   end
 end
 
