@@ -1,0 +1,72 @@
+= EachBatched
+
+More grouping/batching logic options than what's included in Rails.
+
+Ever since Rails 2.3, it has had ActiveRecord::Batches#find_in_batches (and its cousin ActiveRecord::Batches#find_each) as a great resource saver, because it allowed you to run through larger data sets in batches, instead of loading everything under the sun into memory first.
+
+But it has some gotchas.  First, the algorithm it uses tries to keep from messing up during concurrent inserts/deletes, during the loop.  This is a good thing, except it does it by fixing the order to an id order, then grabbing each successive batch (with limit) that's greater than your last primary key id.  So there's no way to limit it to a subset of your data, and there's no way to order anything any differently than by primary key id order.  This can be rather limiting sometimes.  Also it uses finders in kind of an old fashioned way compared to Rails 3... instead of scopes.
+
+So this library attempts to address these, by providing two additional algorithms you can choose from, depending on your needs.
+
+== Dependencies
+
+* Ruby 1.9.2 - does not support Ruby 1.8!
+* Rails 3.x - does not support Rails 2!
+
+== Features
+
+* Saves memory by not needing to load all records into memory at once, just one batch at a time, looping over them all.
+* You can specify an order for your results, using the standard Rails 3 arel/scoped way.
+* You can specify an offset and/or limit to only grab some results, using the standard Rails 3 arel/scoped way.
+* Two different algorithms provided, to fit your different needs.
+* Includes variants that yields groups (each as a scope), or yields individual rows, depending on your needs.
+
+== Usage
+
+Add <tt>each_batched</tt> to your Gemfile, and run <tt>bundle install</tt>
+
+First, let's explain the "range" algorithm:
+* It simply uses offset/limit internally to run through each batch.
+* Benefit is: simple obvious approach, few queries.  Could work on primary-key-less data.
+* Drawback is: does NOT work well with data that could have inserts/deletes while you're looping (it might miss or duplicate random rows at the boundaries of batches)!  So it should only be used on data that you are sure will not change (such as locked data, or static data, etc).
+
+  YourModel.each_by_ranges do |record|
+    # do something with this model record
+  end
+  YourModel.batches_by_ranges do |batch|
+    # do something with this batch
+    # it's a standard model scope that's already been loaded, and can act like an array of records
+  end
+
+Next, the "ids" algorithm:
+* Grabs a list of all selected primary keys in one query, then loops through them all, grabbing the row data in batches.
+* Works with simultaneously changing data nicely.
+* For complicated queries, it could be faster than other approaches too.
+* May generate really long queries if you're doing a lot of rows in each batch.
+
+  YourModel.each_by_ids do |record|
+    # do something with this model record
+  end
+  YourModel.batches_by_ids do |batch|
+    # do something with this batch
+    # it's a standard model scope that has NOT been lazy loaded yet, but will be as soon as you access its records
+  end
+
+== Contributing
+
+If you think you found a bug or want a feature, get involved at http://github.com/dburry/each_batched/issues  If you'd then like to contribute a patch, use Github's wonderful fork and pull request features.
+
+To set up a full development environment:
+* <tt>git clone</tt> the repository,
+* have RVM[https://rvm.beginrescueend.com/] and Bundler[http://gembundler.com/] installed,
+* then cd into your repo (follow any RVM prompts if this is your first time using that),
+* and run <tt>bundle install</tt> to pull in all the rest of the development dependencies.
+* After that point, <tt>rake -T</tt> should be fairly self-explanatory.
+
+== Alternatives
+
+<tt>ActiveRecord::Batches#find_in_batches</tt> and <tt>ActiveRecord::Batches#find_each</tt> built into rails 2.3 and above.
+
+== License
+
+This library is distributed under the MIT license. Please see the LICENSE file.
