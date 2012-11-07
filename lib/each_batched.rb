@@ -1,4 +1,7 @@
-# 
+
+require 'valium'
+
+#
 # More grouping/batching logic options than what's included in Rails.
 #
 
@@ -47,7 +50,9 @@ module EachBatched
   # * The yielded scope can be lazily loaded (though the id selection query has already run obviously)
   def batches_by_ids(batch_size=DEFAULT_BATCH_SIZE)
     reduced_scope = scoped.tap { |s| s.where_values = [] }.offset(nil).limit(nil)
-    select("#{table_name}.#{primary_key}").collect(&(primary_key.to_sym)).in_groups_of(batch_size, false) do |group_ids|
+    # valium's value_of is way faster than select...collect...
+    #select("#{table_name}.#{primary_key}").collect(&(primary_key.to_sym)).in_groups_of(batch_size, false) do |group_ids|
+    scoped.value_of(primary_key).in_groups_of(batch_size, false) do |group_ids|
       # keeps select/group/joins/includes, inside inner batched scope
       yield reduced_scope.where(primary_key => group_ids)
     end
