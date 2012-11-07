@@ -12,6 +12,7 @@ So this library attempts to address these, by providing two additional algorithm
 
 * Ruby 1.9.2 - does not support Ruby 1.8!
 * Rails 3.x - does not support Rails 2!
+* valium gem
 
 == Features
 
