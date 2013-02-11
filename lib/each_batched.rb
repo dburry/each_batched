@@ -45,23 +45,25 @@ module EachBatched
   
   # Yields batches of records from the current scope
   # Snapshots the primary key ids in scope, then loops through grabbing the rows, one chunk of ids at a time.
-  # 
+  #
   # * You should explicitly set an order if you want the same order as #batches_by_range, or it may be different.
   # * The yielded scope can be lazily loaded (though the id selection query has already run obviously)
-  def batches_by_ids(batch_size=DEFAULT_BATCH_SIZE)
+  # * You can optionally give it some column other than the primary key to use, as long as it's guaranteed unique
+  def batches_by_ids(batch_size=DEFAULT_BATCH_SIZE, key=nil)
     reduced_scope = scoped.tap { |s| s.where_values = [] }.offset(nil).limit(nil)
+    key = primary_key if key.nil?
     # valium's value_of is way faster than select...collect...
-    #select("#{table_name}.#{primary_key}").collect(&(primary_key.to_sym)).in_groups_of(batch_size, false) do |group_ids|
-    scoped.value_of(primary_key).in_groups_of(batch_size, false) do |group_ids|
+    #select("#{table_name}.#{key}").collect(&(key.to_sym)).in_groups_of(batch_size, false) do |group_ids|
+    scoped.value_of(key).in_groups_of(batch_size, false) do |group_ids|
       # keeps select/group/joins/includes, inside inner batched scope
-      yield reduced_scope.where(primary_key => group_ids)
+      yield reduced_scope.where(key => group_ids)
     end
   end
   
   # Loops through each individual row found by #batches_by_ids, instead of each batch
   # see #batches_by_ids for an explanation of its algorithm
-  def each_by_ids(batch_size=DEFAULT_BATCH_SIZE)
-    batches_by_ids(batch_size) { |batch| batch.each { |row| yield row } }
+  def each_by_ids(batch_size=DEFAULT_BATCH_SIZE, key=nil)
+    batches_by_ids(batch_size, key) { |batch| batch.each { |row| yield row } }
   end
   
 end
