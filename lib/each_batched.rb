@@ -52,11 +52,9 @@ module EachBatched
   def batches_by_ids(batch_size=DEFAULT_BATCH_SIZE, key=nil)
     reduced_scope = scoped.tap { |s| s.where_values = [] }.offset(nil).limit(nil)
     key = primary_key if key.nil?
-    # valium's value_of is way faster than select...collect...
-    #select("#{table_name}.#{key}").collect(&(key.to_sym)).in_groups_of(batch_size, false) do |group_ids|
     scoped.value_of(key).in_groups_of(batch_size, false) do |group_ids|
       # keeps select/group/joins/includes, inside inner batched scope
-      yield reduced_scope.where(key => group_ids)
+      yield reduced_scope.where(key => group_ids), group_ids
     end
   end
   
